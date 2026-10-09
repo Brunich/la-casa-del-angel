@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/residencia",
+      "destination": "/index.html"
+    },
+    {
       "source": "/acceso",
       "destination": "/index.html"
     },

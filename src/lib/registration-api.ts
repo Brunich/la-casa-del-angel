@@ -1,5 +1,6 @@
 import {supabase} from './api';
 import {parseRegistrationInput,type SelfRegistrationInput} from './registration-input';
+import {authErrorMessage} from './auth-errors';
 export type {SelfRegistrationInput} from './registration-input';
 export interface RegistrationSite{id:string;name:string}
 function client(){if(!supabase)throw new Error('El registro aún no está habilitado. Contacta a coordinación.');return supabase;}
@@ -15,7 +16,7 @@ export async function getRegistrationSites():Promise<RegistrationSite[]>{
 export async function createAccount(input:SelfRegistrationInput,redirectTo:string):Promise<void>{
  const value=parseRegistrationInput(input);
  const{data,error}=await client().auth.signUp({email:value.email,password:value.password,options:{emailRedirectTo:redirectTo,data:{full_name:value.fullName,requested_site_id:value.siteId}}});
- if(error)throw new Error('No se pudo solicitar el registro. Revisa tus datos o espera unos minutos antes de intentar de nuevo.');
+ if(error)throw new Error(authErrorMessage(error,'signup'));
  if(data.session){
   const{error:logoutError}=await client().auth.signOut({scope:'local'});
   if(logoutError)throw new Error('No se pudo cerrar la sesión de registro. Cierra esta página y contacta a coordinación.');

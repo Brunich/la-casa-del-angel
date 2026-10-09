@@ -3,6 +3,7 @@ import {Capacitor} from '@capacitor/core';
 import {MailCheck,UserPlus} from 'lucide-react';
 import {accountRecoveryRedirect,passwordIssues} from './lib/account-link';
 import {createAccount,getRegistrationSites,type RegistrationSite} from './lib/registration-api';
+import {LoadingScreen} from './LoadingScreen';
 
 export function Signup({onSignIn}:{onSignIn:()=>void}){
  const[name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState('');
@@ -26,6 +27,7 @@ export function Signup({onSignIn}:{onSignIn:()=>void}){
    setError(failure instanceof Error?failure.message:'No se confirmó el registro. Revisa los datos y la conexión; si ya tienes cuenta, inicia sesión o recupera tu contraseña.');
   }finally{setBusy(false)}
  }
+ if(busy)return <LoadingScreen title="Solicitando registro" message="Preparando tu solicitud de cuenta."/>;
  if(sent)return <div className="signup-confirmation"><MailCheck size={32} aria-hidden="true"/><h2>Revisa tu correo</h2><p className="message" role="status">Si tu correo puede registrarse, recibirás un enlace para confirmar la cuenta. Revisa también spam. Después de confirmar, la residencia debe asignarte un rol y los accesos autorizados.</p><p>Crear la cuenta no da acceso a expedientes. Puedes iniciar sesión para comprobar si tu autorización ya está lista.</p><button type="button" className="button full" onClick={onSignIn}>Ir a iniciar sesión</button></div>;
  return <><UserPlus size={28} aria-hidden="true"/><h2>Crea tu cuenta</h2><p>Confirma tu correo y espera la autorización de la residencia para entrar a los expedientes.</p><form className="signup-form" onSubmit={submit} aria-busy={busy}><fieldset disabled={busy}>
   <label>Nombre completo<input value={name} onChange={e=>setName(e.target.value)} autoComplete="name" required maxLength={160}/></label>

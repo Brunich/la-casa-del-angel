@@ -1,0 +1,14 @@
+/* Each care area keeps its own visual cue alongside its explicit name/icon. */
+.portal-main[data-section="timeline"]{--section-ink:#335b4c;--section-wash:#e8f0e7}
+.portal-main[data-section="medication"]{--section-ink:#444d7e;--section-wash:#eeedf7}
+.portal-main[data-section="photos"]{--section-ink:#705324;--section-wash:#f6efdf}
+.portal-main[data-section="reminders"]{--section-ink:#8a4c54;--section-wash:#f6e9e8}
+.portal-main[data-section="administration"]{--section-ink:#335b4c;--section-wash:#e8f0e7}
+.portal-main .portal-tabs{padding-block:12px;gap:10px 20px}
+.portal-main .portal-tabs button{border:0;border-radius:8px;padding:10px 14px;gap:10px}
+.portal-main .portal-tabs button.active{color:var(--section-ink);background:var(--section-wash);font-weight:600}
+.portal-main[data-section="medication"] .medication-icon{background:#eeedf7;color:#444d7e}
+.portal-main[data-section="medication"] .inventory-history{margin-top:36px;padding-top:24px;border-top:1px solid var(--line)}
+.portal-main[data-section="photos"] .panel-heading{padding-block:14px}
+.portal-main[data-section="reminders"] .reminder-list article>svg{color:#8a4c54}
+@media(max-width:600px){.portal-main .portal-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px}.portal-main .portal-tabs button{min-height:54px;font-size:1rem;padding:12px 8px;justify-content:flex-start}}

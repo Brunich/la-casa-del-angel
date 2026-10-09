@@ -7,7 +7,8 @@ import {roleNames,type Profile,type Resident,type Role} from './domain';
 import {createSite,getAdminAccounts,getSiteAssignments,manageProfile,setResidentAccess,setStaffSite} from './lib/admin-api';
 import {parseAssignmentInput,parseProfileInput,parseSiteName,type AssignmentInput} from './lib/admin-input';
 
-interface Props {profile:Profile;residents:Resident[];sites:{id:string;name:string}[];onUpdated:()=>void}
+export type AdminSection = 'pending'|'roles'|'staff'|'residents';
+interface Props {profile:Profile;residents:Resident[];sites:{id:string;name:string}[];onUpdated:()=>void;initialSection?:AdminSection}
 type Scope = 'profile'|'site'|'staff'|'resident';
 type Status = {scope:Scope;message:string;error:boolean};
 type Run = (scope:Scope,task:()=>Promise<void>,message:string,onSuccess?:()=>void)=>Promise<void>;
@@ -16,7 +17,7 @@ const accessRoleNames = {...roleNames,owner:'Dirección general',manager:'Manage
 type AdminAccount = Awaited<ReturnType<typeof getAdminAccounts>>[number];
 type ProfileAccount = AdminAccount & {role:Role};
 
-export function AdminAccess({profile,residents,sites,onUpdated}:Props) {
+export function AdminAccess({profile,residents,sites,onUpdated,initialSection='pending'}:Props) {
   const [accounts,setAccounts] = useState<AdminAccount[]>([]);
   const [manualProfile,setManualProfile] = useState(false);
   const [accountsError,setAccountsError] = useState('');
@@ -32,12 +33,17 @@ export function AdminAccess({profile,residents,sites,onUpdated}:Props) {
   const [active,setActive] = useState(profile.active);
   const [verified,setVerified] = useState(false);
   const [siteName,setSiteName] = useState('');
-  const [section,setSection] = useState<'pending'|'roles'|'staff'|'residents'>('pending');
+  const [section,setSection] = useState<AdminSection>(initialSection==='roles'&&profile.role!=='owner'?'pending':initialSection);
   const inFlight = useRef(false);
   const alive = useRef(false);
   const accountRequest = useRef(0);
   const owner = profile.role === 'owner';
   const administrator = owner || profile.role === 'manager';
+  useEffect(()=>{
+    if(!administrator)return;
+    if(!['pending','roles','staff','residents'].includes(initialSection))return;
+    setSection(initialSection==='roles'&&!owner?'pending':initialSection);
+  },[initialSection,administrator,owner]);
 
   async function refreshAccounts() {
     const request = ++accountRequest.current;
