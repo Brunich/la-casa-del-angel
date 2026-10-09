@@ -1,0 +1,5 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+const lib=await import('../src/lib/photo-window.ts').catch(()=>null);
+test('recent photo view keeps exactly seven days without removing archive records',()=>{assert.ok(lib);const now=new Date('2026-10-09T12:00:00Z');const records=[{id:'boundary',photo_path:'a.jpg',occurred_at:'2026-10-02T12:00:00Z'},{id:'older',photo_path:'b.jpg',occurred_at:'2026-10-02T11:59:59Z'},{id:'today',photo_path:'c.jpg',occurred_at:'2026-10-09T11:00:00Z'},{id:'no-photo',photo_path:null,occurred_at:'2026-10-09T11:00:00Z'}];const result=lib.photoWindow(records,now);assert.deepEqual(result.recent.map(p=>p.id),['boundary','today']);assert.deepEqual(result.archived.map(p=>p.id),['older']);assert.equal(records.length,4);});
+test('invalid and excessive future times cannot appear as recent evidence',()=>{assert.ok(lib);const now=new Date('2026-10-09T12:00:00Z');const result=lib.photoWindow([{photo_path:'a',occurred_at:'invalid'},{photo_path:'b',occurred_at:'2026-11-09T12:00:00Z'}],now);assert.equal(result.recent.length,0);assert.equal(result.archived.length,0);});

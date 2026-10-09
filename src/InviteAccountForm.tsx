@@ -1,0 +1,9 @@
+import {useState,type FormEvent} from 'react';
+import {MailPlus} from 'lucide-react';
+import {inviteAccount} from './lib/admin-api';
+export function InviteAccountForm({onUpdated}:{onUpdated:()=>void}){
+ const[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(false);
+ const[verified,setVerified]=useState(false);
+ async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();if(busy||!verified)return;const form=e.currentTarget,f=new FormData(form);setBusy(true);setMessage('');setError(false);try{await inviteAccount(String(f.get('email')),String(f.get('name')));setMessage('Invitación enviada. Después de confirmar su correo, aparecerá en Cuentas pendientes para asignarle su rol.');form.reset();setVerified(false);onUpdated()}catch(err){setError(true);setMessage((err as Error).message)}finally{setBusy(false)}}
+ return <section className="form-panel"><h2><MailPlus size={23} aria-hidden="true"/> Invitar a una persona nueva</h2><p>Si aún no tiene cuenta, envíale una invitación. No necesita registrarse por su cuenta ni recibir acceso a expedientes todavía.</p><form onSubmit={submit} onChange={e=>{if(e.target.getAttribute('name')!=='verified'){setVerified(false);setMessage('')}}} aria-busy={busy}><fieldset disabled={busy}><div className="field-grid"><label>Nombre completo<input name="name" required maxLength={160}/></label><label>Correo<input type="email" name="email" required maxLength={254}/></label></div><label className="checkbox"><input name="verified" type="checkbox" checked={verified} onChange={e=>setVerified(e.target.checked)} required/>Confirmé la identidad y este correo con la persona</label><button className="button" disabled={!verified}>{busy?'Enviando…':'Enviar invitación'}</button></fieldset></form>{message&&<p className={error?'message error':'message'} role={error?'alert':'status'}>{message}</p>}</section>;
+}

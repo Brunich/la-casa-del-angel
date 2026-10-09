@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">La Casa del Ángel</string>
+    <string name="title_activity_main">La Casa del Ángel</string>
+    <string name="package_name">mx.lacasadelangel.cuidados</string>
+    <string name="custom_url_scheme">mx.lacasadelangel.cuidados</string>
+</resources>

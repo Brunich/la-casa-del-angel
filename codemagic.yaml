@@ -1,0 +1,58 @@
+workflows:
+  android-functional:
+    name: Android - compilación de pruebas
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      node: 24.14.0
+      java: 21
+      groups:
+        - la_casa_angel_pruebas
+    scripts:
+      - name: Verificar configuración pública
+        script: |
+          node -e "for(const key of ['VITE_SUPABASE_URL','VITE_SUPABASE_PUBLISHABLE_KEY'])if(!process.env[key]){console.error('Falta configurar '+key);process.exit(1)}"
+      - name: Instalar dependencias bloqueadas
+        script: npm ci
+      - name: Pruebas funcionales de lógica
+        script: npm test
+      - name: Construir y sincronizar Android
+        script: |
+          npm run build
+          npx cap sync android
+      - name: Compilar APK de depuración
+        script: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+    artifacts:
+      - android/app/build/outputs/apk/debug/*.apk
+  ios-compile-check:
+    name: iOS - comprobar compilación sin distribución
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      node: 24.14.0
+      xcode: latest
+      groups:
+        - la_casa_angel_pruebas
+    scripts:
+      - name: Verificar configuración pública
+        script: |
+          node -e "for(const key of ['VITE_SUPABASE_URL','VITE_SUPABASE_PUBLISHABLE_KEY'])if(!process.env[key]){console.error('Falta configurar '+key);process.exit(1)}"
+      - name: Instalar dependencias bloqueadas
+        script: npm ci
+      - name: Pruebas funcionales de lógica
+        script: npm test
+      - name: Construir y sincronizar iOS desde macOS
+        script: |
+          npm run build
+          npx cap sync ios
+      - name: Resolver paquetes Swift
+        script: |
+          xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App
+      - name: Compilar para dispositivo sin firma
+        script: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
+    artifacts:
+      - build/ios/Build/Products/Debug-iphoneos/App.app

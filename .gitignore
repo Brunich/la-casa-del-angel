@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env*
+!.env.example
+.vercel/
+*.tsbuildinfo
+.impeccable/review/
+android/.gradle/
+android/local.properties
+ios/App/Pods/
+.agents/skills/security-audit/
+supabase/.temp/
+*.log
