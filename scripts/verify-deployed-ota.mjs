@@ -1,0 +1,17 @@
+import {createPublicKey,publicDecrypt,createDecipheriv,createHash,constants} from 'node:crypto';
+import {OTA_PUBLIC_KEY_SPKI,OTA_NATIVE_BUILD} from '../src/lib/ota-public-key.ts';
+import {verifyOtaManifest} from '../src/lib/ota-manifest.ts';
+const response=await fetch('https://la-casa-del-angel.vercel.app/updates/latest.json',{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(20000)});
+if(!response.ok||response.headers.get('access-control-allow-origin')!=='*')throw new Error('Manifest unavailable to installed Android origin.');
+const manifest=await verifyOtaManifest(await response.text(),OTA_PUBLIC_KEY_SPKI,'0.0.0',OTA_NATIVE_BUILD);
+if(!manifest)throw new Error('Missing baseline release.');
+const bundle=await fetch(manifest.url,{redirect:'error',signal:AbortSignal.timeout(30000)});
+if(!bundle.ok)throw new Error('Published bundle unavailable.');
+const bytes=Buffer.from(await bundle.arrayBuffer());
+const pub=createPublicKey(OTA_PUBLIC_KEY_SPKI),parts=manifest.sessionKey.split(':');
+const aesKey=publicDecrypt({key:pub,padding:constants.RSA_PKCS1_PADDING},Buffer.from(parts[1],'base64'));
+const cipher=createDecipheriv('aes-128-cbc',aesKey,Buffer.from(parts[0],'base64'));
+const zip=Buffer.concat([cipher.update(bytes),cipher.final()]);
+const digest=createHash('sha256').update(zip).digest();
+if(digest.toString('hex')!==manifest.sha256||!digest.equals(publicDecrypt({key:pub,padding:constants.RSA_PKCS1_PADDING},Buffer.from(manifest.checksum,'hex'))))throw new Error('Published bundle integrity failed.');
+console.log(JSON.stringify({version:manifest.version,encryptedBytes:bytes.length,signature:true,checksum:true,androidCors:true}));

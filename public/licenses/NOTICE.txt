@@ -1,0 +1,4 @@
+La Casa del Angel includes @capgo/capacitor-updater 8.52.1, MPL-2.0.
+Unmodified upstream source: https://github.com/Cap-go/capacitor-updater/tree/8.52.1
+License: capacitor-updater-MPL-2.0.txt in this directory.
+No Capgo Cloud account, subscription or statistics endpoint is configured.

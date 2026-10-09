@@ -3,17 +3,37 @@ import {LocalNotifications} from '@capacitor/local-notifications';
 import type {MedicationPlan,Reminder} from '../domain';
 import {medicationForecast} from '../domain';
 import {NotificationQueue} from './notification-queue';
+import {webNotificationOptions} from './web-notification-options';
 let allowed=false,permissionEpoch=0;
 const shown=new Set<string>();
 const queue=new NotificationQueue();
+let webRegistration:ServiceWorkerRegistration|null=null;
+async function prepareWebNotifications(){
+ const registration=await navigator.serviceWorker.register('/notifications-sw.js',{scope:'/',updateViaCache:'none'});
+ if(!registration.active){
+  const worker=registration.installing??registration.waiting;
+  if(!worker)throw new Error('No se pudo activar el servicio de avisos. Revisa la conexión e intenta de nuevo.');
+  await new Promise<void>((resolve,reject)=>{
+   const cleanup=()=>{clearTimeout(timer);worker.removeEventListener('statechange',changed)};
+   const changed=()=>{if(worker.state==='activated'){cleanup();resolve()}else if(worker.state==='redundant'){cleanup();reject(new Error('No se pudo activar el servicio de avisos. Intenta de nuevo.'))}};
+   const timer=setTimeout(()=>{cleanup();reject(new Error('El servicio de avisos tardó demasiado. Revisa la conexión e intenta de nuevo.'))},15000);
+   worker.addEventListener('statechange',changed);changed();
+  });
+ }
+ return registration;
+}
 const notificationId=(value:string)=>{let hash=2166136261;for(const c of value)hash=Math.imul(hash^c.charCodeAt(0),16777619);return(hash>>>0)%2147483646+1};
 export const isNative=()=>Capacitor.isNativePlatform();
 export async function enableNotifications(){
  const epoch=permissionEpoch;
  let granted=false;
  if(isNative())granted=(await LocalNotifications.requestPermissions()).display==='granted';
- else if('Notification' in window)granted=(await Notification.requestPermission())==='granted';
- else throw new Error('Este navegador no permite notificaciones. Consulta los pendientes en la app.');
+ else if('Notification' in window&&'serviceWorker' in navigator){
+  // Request permission directly from the user's click, before any registration awaits.
+  granted=(await Notification.requestPermission())==='granted';
+  if(granted){try{webRegistration=await prepareWebNotifications()}catch{throw new Error('No se pudo preparar el servicio de avisos. Revisa la conexión y vuelve a activar los avisos.');}}
+ }
+ else throw new Error('Este navegador no permite estos avisos. En iPhone, añade la web a Inicio con Safari y abre ese icono; consulta los pendientes en el portal.');
  if(epoch!==permissionEpoch)throw new Error('La sesión cambió. Activa los avisos después de iniciar sesión.');
  allowed=granted;
  if(!allowed)throw new Error('No se autorizaron las notificaciones. Puedes habilitarlas en los ajustes de tu dispositivo.');
@@ -45,7 +65,10 @@ export async function syncDeviceNotifications(reminders:Reminder[],plans:Medicat
    if(!current()||!allowed)return;
    if(shown.has(id))continue;
    if(isNative())await LocalNotifications.schedule({notifications:[{id:notificationId(id),title:'La Casa del Ángel',body:'Tienes pendientes para revisar en el portal privado.'}]});
-   else new Notification('La Casa del Ángel',{body:'Tienes cuidados o medicamentos pendientes de revisar en el portal privado.',tag:id});
+   else {
+    if(!webRegistration?.active)throw new Error('El servicio de avisos no está activo. Vuelve a activar los avisos en el portal.');
+    await webRegistration.showNotification('La Casa del Ángel',webNotificationOptions('care-'+notificationId(id)));
+   }
    if(current()&&allowed)shown.add(id);
   }
  });
@@ -53,7 +76,10 @@ export async function syncDeviceNotifications(reminders:Reminder[],plans:Medicat
 export async function clearDeviceNotifications(){
  allowed=false;permissionEpoch++;shown.clear();
  return queue.run(async current=>{
-  if(!isNative())return;
+  if(!isNative()){
+   if(webRegistration){const notices=await webRegistration.getNotifications();if(current())for(const notice of notices)if(notice.tag.startsWith('care-'))notice.close();}
+   return;
+  }
   const pending=await LocalNotifications.getPending();
   if(current()&&pending.notifications.length)await LocalNotifications.cancel({notifications:pending.notifications.map(n=>({id:n.id}))});
  });

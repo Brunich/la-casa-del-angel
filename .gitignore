@@ -11,3 +11,8 @@ ios/App/Pods/
 .agents/skills/security-audit/
 supabase/.temp/
 *.log
+*.pem
+*.key
+*.keystore
+*.jks
+public/updates/
