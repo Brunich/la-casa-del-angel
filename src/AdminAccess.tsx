@@ -10,7 +10,7 @@ import {parseAssignmentInput,parseProfileInput,parseSiteName,type AssignmentInpu
 import './admin-team.css';
 
 export type AdminSection = 'pending'|'roles'|'staff'|'residents';
-interface Props {profile:Profile;residents:Resident[];sites:{id:string;name:string}[];onUpdated:()=>void;initialSection?:AdminSection}
+interface Props {profile:Profile;residents:Resident[];sites:{id:string;name:string}[];onUpdated:()=>void;initialSection?:AdminSection;onResident?:(id:string)=>void}
 type Scope = 'profile'|'site'|'staff'|'resident';
 type Status = {scope:Scope;message:string;error:boolean};
 type Run = (scope:Scope,task:()=>Promise<void>,message:string,onSuccess?:()=>void)=>Promise<void>;
@@ -19,7 +19,7 @@ const accessRoleNames = {...roleNames,owner:'Dirección general',manager:'Manage
 type AdminAccount = Awaited<ReturnType<typeof getAdminAccounts>>[number];
 type ProfileAccount = AdminAccount & {role:Role};
 
-export function AdminAccess({profile,residents,sites,onUpdated,initialSection='pending'}:Props) {
+export function AdminAccess({profile,residents,sites,onUpdated,initialSection='pending',onResident}:Props) {
   const [accounts,setAccounts] = useState<AdminAccount[]>([]);
   const [accountsError,setAccountsError] = useState('');
   const [accountsLoading,setAccountsLoading] = useState(true);
@@ -131,7 +131,7 @@ export function AdminAccess({profile,residents,sites,onUpdated,initialSection='p
     <InvitationHistory revision={accounts}/>
     {!accountsLoading&&<ManagerOnboarding accounts={accounts.filter(p => p.role === null)} residents={residents} sites={sites} onUpdated={()=>{void refreshAccounts();onUpdated();}}/>}
     </>}
-    {section==='staff'&&<><SiteTeam sites={sites} residents={residents} accounts={accounts} owner={owner} selectedSiteId={selectedSiteId} onSelectSite={setSelectedSiteId}/>
+    {section==='staff'&&<><SiteTeam sites={sites} residents={residents} accounts={accounts} owner={owner} selectedSiteId={selectedSiteId} onSelectSite={setSelectedSiteId} onResident={onResident}/>
       {selectedSiteId&&<div className="team-action-tabs" aria-label="Acciones de equipo">
         <button type="button" aria-pressed={staffAction==='grant'} onClick={()=>{setStaffAction('grant');setStatus(null);}}><KeyRound size={20} aria-hidden="true"/> Dar permisos</button>
         <button type="button" aria-pressed={staffAction==='revoke'} onClick={()=>{setStaffAction('revoke');setStatus(null);}}><UserRoundMinus size={20} aria-hidden="true"/> Revocar accesos</button>

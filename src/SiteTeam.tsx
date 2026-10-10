@@ -1,13 +1,16 @@
 import {useEffect,useState} from 'react';
 import {Building2,HeartHandshake,LoaderCircle,Users,MapPin,ChevronRight} from 'lucide-react';
-import type {Resident} from './domain';
+import type {CareEvent,Resident} from './domain';
+import {getTimeline,supabase} from './lib/api';
+import {dateTime,kinds} from './domain';
+import {PrivateCarePhoto} from './PrivateCarePhoto';
 import {getSiteAssignments,type AdminAccount} from './lib/admin-api';
 
-interface Props {sites:{id:string;name:string}[];residents:Resident[];accounts:AdminAccount[];owner:boolean;selectedSiteId?:string;onSelectSite?:(id:string)=>void}
+interface Props {sites:{id:string;name:string}[];residents:Resident[];accounts:AdminAccount[];owner:boolean;selectedSiteId?:string;onSelectSite?:(id:string)=>void;onResident?:(id:string)=>void}
 type Assignments = Awaited<ReturnType<typeof getSiteAssignments>>;
 
-export function SiteTeam({sites,residents,accounts,owner,selectedSiteId,onSelectSite}:Props){
- const[selectedSite,setSelectedSite]=useState('');
+export function SiteTeam({sites,residents,accounts,owner,selectedSiteId,onSelectSite,onResident}:Props){
+ const[selectedSite,setSelectedSite]=useState(''),[selectedStaff,setSelectedStaff]=useState<AdminAccount|null>(null);
  const[data,setData]=useState<Assignments|null>(null);
  const[loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);
  useEffect(()=>{
@@ -35,12 +38,12 @@ export function SiteTeam({sites,residents,accounts,owner,selectedSiteId,onSelect
  function employeeList(people:AdminAccount[],showResidents=true){
   return <ul className="site-team-tree">{people.map(person=>{
    const linked=assignedResidents(person);
-   return <li key={person.id}><strong>{person.full_name||person.email}</strong><span className="caption"> {person.email}{person.active?'':' · Cuenta inactiva'}</span>
-    {showResidents&&(linked.length>0?<ul>{linked.map(r=><li key={r.id}>{r.full_name}{r.room?` · Habitación ${r.room}`:''}</li>)}</ul>:<p className="caption">Sin residentes asignados en esta sede.</p>)}
+   return <li key={person.id}>{person.role==='nurse'||person.role==='manager'?<button className="team-profile-link" onClick={()=>setSelectedStaff(person)}>{person.full_name||person.email} · Ver actividad</button>:<strong>{person.full_name||person.email}</strong>}<span className="caption"> {person.email}{person.active?'':' · Cuenta inactiva'}</span>
+    {showResidents&&(linked.length>0?<ul>{linked.map(r=><li key={r.id}><button className="team-profile-link" onClick={()=>onResident?.(r.id)}>{r.full_name}{r.room?` · Habitación ${r.room}`:''} · Ver cuidados</button></li>)}</ul>:<p className="caption">Sin residentes asignados en esta sede.</p>)}
    </li>;
   })}</ul>;
  }
- function chooseSite(id:string){setSelectedSite(id);onSelectSite?.(id);}
+ function chooseSite(id:string){setSelectedStaff(null);setSelectedSite(id);onSelectSite?.(id);}
  return <section className="site-team form-panel" aria-labelledby="site-team-heading" aria-busy={loading}>
   <div className="panel-heading"><div><h2 id="site-team-heading"><Building2 size={22} aria-hidden="true"/> Sedes y equipo</h2><p>{owner?'Elige una colonia para consultar su equipo y organizar los permisos.':'Elige una de tus sedes para organizar el equipo y sus residentes.'}</p></div><button className="button small outline" type="button" disabled={loading} onClick={()=>setRevision(r=>r+1)}>Actualizar equipo</button></div>
   <div className="site-colony-grid" aria-label="Sedes por colonia">{sites.map(s=>{
@@ -71,7 +74,7 @@ export function SiteTeam({sites,residents,accounts,owner,selectedSiteId,onSelect
        const accessIds=[...new Set(data.residents.filter(link=>link.resident_id===resident.id).map(link=>link.user_id))];
        const family=accounts.filter(a=>a.role==='family'&&accessIds.includes(a.id));
        const unavailable=accessIds.filter(id=>!accounts.some(a=>a.id===id)).length;
-       return <li key={resident.id}><strong>{resident.full_name}</strong><span className="caption">{resident.room?` · Habitación ${resident.room}`:''}{resident.active?'':' · Residente inactivo'}</span>
+       return <li key={resident.id}><button className="team-profile-link" onClick={()=>onResident?.(resident.id)}>{resident.full_name} · Ver cuidados</button><span className="caption">{resident.room?` · Habitación ${resident.room}`:''}{resident.active?'':' · Residente inactivo'}</span>
         {family.length>0?<ul>{family.map(person=><li key={person.id}>{person.full_name||person.email} · {person.email}{person.active?'':' · Cuenta inactiva'}</li>)}</ul>:<p className="caption">Sin familiares autorizados en este listado.</p>}
         {unavailable>0&&<p className="caption">{unavailable} {unavailable===1?'acceso con perfil fuera de este listado.':'accesos con perfiles fuera de este listado.'}</p>}
        </li>;
@@ -79,6 +82,7 @@ export function SiteTeam({sites,residents,accounts,owner,selectedSiteId,onSelect
      </section>
     </div>
    </div>}
+   {selectedStaff&&site&&<StaffActivity key={selectedStaff.id+site.id} person={selectedStaff} residents={selectedStaff.role==='manager'?currentResidents:assignedResidents(selectedStaff)} onResident={onResident} onClose={()=>setSelectedStaff(null)}/>}
    {owners.length>0&&<details className="site-team-global"><summary>Dirección general · todas las sedes</summary><p className="caption">Administra toda la organización, sin una sede individual.</p>{employeeList(owners,false)}</details>}
    <details className="site-team-unassigned"><summary>Personas y residentes sin sede asignada</summary>
     {staffWithoutSite.length===0&&residentsWithoutSite.length===0?<p className="caption">No hay personal ni residentes sin sede en esta consulta.</p>:<>
@@ -88,4 +92,12 @@ export function SiteTeam({sites,residents,accounts,owner,selectedSiteId,onSelect
    </details>
   </>}
  </section>;
+}
+
+function StaffActivity({person,residents,onResident,onClose}:{person:AdminAccount;residents:Resident[];onResident?: (id:string)=>void;onClose:()=>void}){
+ const[events,setEvents]=useState<CareEvent[]>([]),[error,setError]=useState(''),[loading,setLoading]=useState(true);
+ useEffect(()=>{let alive=true;const actor=supabase;
+  void(async()=>{try{const result:CareEvent[]=[];for(let offset=0;offset<residents.length;offset+=4){const rows=await Promise.all(residents.slice(offset,offset+4).map(resident=>getTimeline(resident.id)));if(!alive||actor!==supabase)return;result.push(...rows.flat().filter(event=>event.actor_id===person.id));}if(alive)setEvents(result.sort((a,b)=>Date.parse(b.occurred_at)-Date.parse(a.occurred_at)));}catch{if(alive)setError('No se pudo consultar la actividad autorizada. Cierra la ficha y vuelve a abrirla.');}finally{if(alive)setLoading(false);}})();return()=>{alive=false};
+ },[person.id,residents]);
+ return <section className="staff-profile"><div className="panel-heading"><div><h2>{person.full_name}</h2><p>{person.role==='nurse'?'Enfermería · Residentes a cargo':'Manager · Residentes de su sede'}</p></div><button className="button small outline" onClick={onClose}>Cerrar ficha</button></div><p>Ficha de consulta. Mantienes tu propia cuenta y sus permisos.</p><ul>{residents.map(resident=><li key={resident.id}><button className="team-profile-link" onClick={()=>onResident?.(resident.id)}>{resident.full_name} · Ver expediente</button></li>)}</ul><h3>Publicaciones de esta persona</h3>{loading?<p role="status">Consultando actividad…</p>:error?<p role="alert" className="message error">{error}</p>:!events.length?<p>No hay publicaciones de esta persona en los residentes de esta sede.</p>:events.map(event=><article className="timeline-event" key={event.id}><div><h4>{kinds[event.kind]} · {residents.find(resident=>resident.id===event.resident_id)?.full_name}</h4><p>{dateTime(event.occurred_at)}</p>{event.notes&&<p>{event.notes}</p>}{event.photo_path&&<PrivateCarePhoto path={event.photo_path} caption={kinds[event.kind]+' · '+dateTime(event.occurred_at)}/>}<button className="text-link" onClick={()=>onResident?.(event.resident_id)}>Abrir todos sus cuidados</button></div></article>)}</section>;
 }
