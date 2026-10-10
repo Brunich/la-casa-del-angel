@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {Building2,HeartHandshake,KeyRound,LoaderCircle,UserPlus,Users,UserRoundCog,UserRoundMinus} from 'lucide-react';
 import {ManagerOnboarding} from './ManagerOnboarding';
-import {SiteTeam} from './SiteTeam';
+import {SiteTeam,type TeamView} from './SiteTeam';
 import {InviteAccountForm} from './InviteAccountForm';
 import {InvitationHistory} from './InvitationHistory';
 import {roleNames,type Profile,type Resident,type Role} from './domain';
@@ -10,7 +10,7 @@ import {parseAssignmentInput,parseProfileInput,parseSiteName,type AssignmentInpu
 import './admin-team.css';
 
 export type AdminSection = 'pending'|'roles'|'staff'|'residents';
-interface Props {profile:Profile;residents:Resident[];sites:{id:string;name:string}[];onUpdated:()=>void;initialSection?:AdminSection;onResident?:(id:string)=>void}
+interface Props {profile:Profile;residents:Resident[];sites:{id:string;name:string}[];onUpdated:()=>void;initialSection?:AdminSection;onResident?:(id:string,tab?:'timeline'|'photos')=>void}
 type Scope = 'profile'|'site'|'staff'|'resident';
 type Status = {scope:Scope;message:string;error:boolean};
 type Run = (scope:Scope,task:()=>Promise<void>,message:string,onSuccess?:()=>void)=>Promise<void>;
@@ -38,6 +38,8 @@ export function AdminAccess({profile,residents,sites,onUpdated,initialSection='p
   const [section,setSection] = useState<AdminSection>(initialSection==='roles'?'staff':initialSection);
   const [staffAction,setStaffAction] = useState<'grant'|'revoke'|'profile'>(initialSection==='roles'&&profile.role==='owner'?'profile':'grant');
   const [selectedSiteId,setSelectedSiteId] = useState('');
+  const [teamView,setTeamView] = useState<TeamView>('residents');
+  const [assignmentKind,setAssignmentKind] = useState<'staff'|'resident'|'sector'>('staff');
   const inFlight = useRef(false);
   const alive = useRef(false);
   const accountRequest = useRef(0);
@@ -131,14 +133,14 @@ export function AdminAccess({profile,residents,sites,onUpdated,initialSection='p
     <InvitationHistory revision={accounts}/>
     {!accountsLoading&&<ManagerOnboarding accounts={accounts.filter(p => p.role === null)} residents={residents} sites={sites} onUpdated={()=>{void refreshAccounts();onUpdated();}}/>}
     </>}
-    {section==='staff'&&<><SiteTeam sites={sites} residents={residents} accounts={accounts} owner={owner} selectedSiteId={selectedSiteId} onSelectSite={setSelectedSiteId} onResident={onResident}/>
-      {selectedSiteId&&<div className="team-action-tabs" aria-label="Acciones de equipo">
+    {section==='staff'&&<><SiteTeam sites={sites} residents={residents} accounts={accounts} owner={owner} selectedSiteId={selectedSiteId} onSelectSite={id=>{setSelectedSiteId(id);setTeamView('residents');setStatus(null);}} onResident={onResident} view={teamView} onView={setTeamView}/>
+      {selectedSiteId&&teamView==='access'&&<div className="team-action-tabs" aria-label="Acciones de equipo">
         <button type="button" aria-pressed={staffAction==='grant'} onClick={()=>{setStaffAction('grant');setStatus(null);}}><KeyRound size={20} aria-hidden="true"/> Dar permisos</button>
         <button type="button" aria-pressed={staffAction==='revoke'} onClick={()=>{setStaffAction('revoke');setStatus(null);}}><UserRoundMinus size={20} aria-hidden="true"/> Revocar accesos</button>
         {owner&&<button type="button" aria-pressed={staffAction==='profile'} onClick={()=>{setStaffAction('profile');setStatus(null);}}><UserRoundCog size={20} aria-hidden="true"/> Cambiar rol del perfil</button>}
       </div>}
     </>}
-    {owner && section==='staff' && selectedSiteId && staffAction==='profile' && <section className="form-panel" aria-labelledby="account-heading">
+    {owner && section==='staff' && teamView==='access' && selectedSiteId && staffAction==='profile' && <section className="form-panel" aria-labelledby="account-heading">
       <h2 id="account-heading"><Users size={22} aria-hidden="true"/> Cambiar rol del perfil</h2>
       <p>Selecciona a la persona y revisa el rol, sus sedes y los residentes autorizados. Al guardar, esta selección sustituye sus permisos anteriores.</p>
       <form onSubmit={saveProfile} aria-busy={busy === 'profile'}>
@@ -163,15 +165,17 @@ export function AdminAccess({profile,residents,sites,onUpdated,initialSection='p
       </form>
     </section>}
 
-    {section==='staff'&&selectedSiteId&&staffAction!=='profile'&&!accountsLoading&&<section className="form-panel" aria-labelledby="sites-heading">
-      <h2 id="sites-heading">{staffAction==='grant'?<KeyRound size={22} aria-hidden="true"/>:<UserRoundMinus size={22} aria-hidden="true"/>} {staffAction==='grant'?'Dar permisos':'Revocar accesos'}</h2>
+    {section==='staff'&&teamView==='access'&&selectedSiteId&&staffAction!=='profile'&&!accountsLoading&&<section className="form-panel access-editor" aria-labelledby="sites-heading">
+      <h2 id="sites-heading">{staffAction==='grant'?<KeyRound size={22} aria-hidden="true"/>:<UserRoundMinus size={22} aria-hidden="true"/>} {staffAction==='grant'?'Añadir un acceso':'Retirar un acceso'}</h2>
       <p>{staffAction==='grant'?'Elige quién trabajará en una sede y qué residentes podrá atender. Puedes añadir varias asignaciones sin cambiar su rol.':'Retira el permiso específico de sede o residente. La persona conserva su cuenta y sus demás asignaciones.'}</p>
-      <h3 className="assignment-heading">{staffAction==='grant'?'Permiso para trabajar en una sede':'Retirar acceso a una sede'}</h3>
-      <AssignmentForm key={`staff-${staffAction}`} scope="staff" label="Sede" targets={sites} accounts={staffAccounts} busy={busy} status={status} run={run} clearStatus={() => setStatus(null)} mutate={setStaffSite} assigned={staffAction==='grant'} initialTargetId={selectedSiteId}/>
-      <h3 className="assignment-heading">Residentes a cargo de enfermería</h3>
-      <p>Asigna residentes individualmente o selecciona todos los actuales de una sede.</p>
-      <AssignmentForm key={`resident-${staffAction}`} scope="resident" label="Residente" targets={residents.map(r => ({id:r.id,name:r.full_name}))} accounts={nurseAccounts} busy={busy} status={status} run={run} clearStatus={() => setStatus(null)} mutate={setResidentAccess} assigned={staffAction==='grant'}/>
-      <SectorForm key={`sector-${staffAction}`} sites={sites} accounts={nurseAccounts} residents={residents} assignments={scopeAssignments} busy={busy} status={status} run={run} clearStatus={()=>setStatus(null)} grant={staffAction==='grant'} initialSiteId={selectedSiteId}/>
+      <div className="assignment-choices" aria-label="Tipo de asignación">
+        <button type="button" aria-pressed={assignmentKind==='staff'} onClick={()=>{setAssignmentKind('staff');setStatus(null);}}><Building2 size={20}/><span>Personal de la sede<small>Quién trabaja aquí</small></span></button>
+        <button type="button" aria-pressed={assignmentKind==='resident'} onClick={()=>{setAssignmentKind('resident');setStatus(null);}}><HeartHandshake size={20}/><span>Un residente<small>Quién se encarga de su cuidado</small></span></button>
+        <button type="button" aria-pressed={assignmentKind==='sector'} onClick={()=>{setAssignmentKind('sector');setStatus(null);}}><Users size={20}/><span>Grupo completo<small>Todos los residentes actuales</small></span></button>
+      </div>
+      {assignmentKind==='staff'&&<AssignmentForm key={`staff-${staffAction}-${selectedSiteId}`} scope="staff" label="Sede" targets={sites.filter(s=>s.id===selectedSiteId)} accounts={staffAccounts} busy={busy} status={status} run={run} clearStatus={() => setStatus(null)} mutate={setStaffSite} assigned={staffAction==='grant'} initialTargetId={selectedSiteId} actionLabel={staffAction==='grant'?'Incorporar a la sede':'Retirar de la sede'}/>}
+      {assignmentKind==='resident'&&<AssignmentForm key={`resident-${staffAction}-${selectedSiteId}`} scope="resident" label="Residente" targets={residents.filter(r=>r.site_id===selectedSiteId).map(r => ({id:r.id,name:r.full_name}))} accounts={nurseAccounts.filter(a=>scopeAssignments?.staff.some(link=>link.user_id===a.id&&link.site_id===selectedSiteId))} busy={busy} status={status} run={run} clearStatus={() => setStatus(null)} mutate={setResidentAccess} assigned={staffAction==='grant'} actionLabel={staffAction==='grant'?'Asignar residente':'Retirar asignación'}/>}
+      {assignmentKind==='sector'&&<SectorForm key={`sector-${staffAction}-${selectedSiteId}`} sites={sites.filter(s=>s.id===selectedSiteId)} accounts={nurseAccounts} residents={residents} assignments={scopeAssignments} busy={busy} status={status} run={run} clearStatus={()=>setStatus(null)} grant={staffAction==='grant'} initialSiteId={selectedSiteId}/>}
     </section>}
     {section==='staff'&&owner&&<details className="form-panel"><summary>Añadir otra sede</summary><form onSubmit={saveSite} aria-busy={busy === 'site'}>
         <label>Nombre de la nueva sede<input value={siteName} onChange={e => {setSiteName(e.target.value);setStatus(null);}} disabled={blocked} required maxLength={160}/></label>
@@ -190,9 +194,9 @@ export function AdminAccess({profile,residents,sites,onUpdated,initialSection='p
 interface AssignmentProps {
   scope:'staff'|'resident';label:string;targets:{id:string;name:string}[];accounts:ProfileAccount[];
   busy:Scope|null;status:Status|null;run:Run;clearStatus:()=>void;mutate:(input:AssignmentInput)=>Promise<void>;
-  assigned?:boolean;initialTargetId?:string;
+  assigned?:boolean;initialTargetId?:string;actionLabel?:string;
 }
-function AssignmentForm({scope,label,targets,accounts,busy,status,run,clearStatus,mutate,assigned:fixedAssigned,initialTargetId=''}:AssignmentProps) {
+function AssignmentForm({scope,label,targets,accounts,busy,status,run,clearStatus,mutate,assigned:fixedAssigned,initialTargetId='',actionLabel}:AssignmentProps) {
   const [userId,setUserId] = useState('');
   const [targetId,setTargetId] = useState('');
   const [assigned,setAssigned] = useState(fixedAssigned??true);
@@ -217,7 +221,7 @@ function AssignmentForm({scope,label,targets,accounts,busy,status,run,clearStatu
     {userId&&targetId&&<p className="message">{assigned?'Darás acceso a':'Retirarás el acceso de'} {accounts.find(p=>p.id===userId)?.full_name||'esta persona'} {assigned?'a':'en'} {targets.find(t=>t.id===targetId)?.name}. La acción se guardará en la auditoría.</p>}
     <label className="checkbox"><input type="checkbox" checked={verified} onChange={e => {setVerified(e.target.checked);clearStatus();}} disabled={disabled} required/>{verificationText}</label>
     <Feedback scope={scope} status={status}/>
-    <SaveButton saving={busy === scope} disabled={disabled || !verified || targets.length === 0 || accounts.length === 0}>{assigned ? 'Dar permisos' : 'Revocar acceso'}</SaveButton>
+    <SaveButton saving={busy === scope} disabled={disabled || !verified || targets.length === 0 || accounts.length === 0}>{actionLabel??(assigned ? 'Autorizar acceso' : 'Revocar acceso')}</SaveButton>
   </form>;
 }
 export function ScopeChecklist({title,options,selected,disabled,onChange}:{title:string;options:{id:string;name:string}[];selected:string[];disabled:boolean;onChange:(ids:string[])=>void}) {
@@ -233,7 +237,7 @@ function SectorForm({sites,accounts,residents,assignments,busy,status,run,clearS
   const blocked=busy!==null;
   function changed(){setVerified(false);clearStatus();}
   function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!verified)return;void run('resident',()=>assignNurseSector(accountId,siteId,grant),grant?'Acceso a todos los residentes actuales de esta sede confirmado.':'Accesos de enfermería a residentes de esta sede retirados.',()=>setVerified(false));}
-  return <details className="sector-access"><summary>{grant?'Todos los residentes de esta sede':'Revocar todos los residentes de esta sede'}</summary>
+  return <section className="sector-access"><h3>{grant?'Asignar el grupo completo':'Retirar el grupo completo'}</h3>
     <p>Aplica a los residentes activos actuales. Los nuevos residentes requieren una asignación posterior.</p>
     <form onSubmit={submit} aria-busy={busy==='resident'}><div className="field-grid">
       <label>Sede<select value={siteId} required disabled={blocked} onChange={e=>{setSiteId(e.target.value);setAccountId('');changed();}}><option value="">Seleccionar sede</option>{sites.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
@@ -244,7 +248,7 @@ function SectorForm({sites,accounts,residents,assignments,busy,status,run,clearS
     <label className="checkbox"><input type="checkbox" checked={verified} required disabled={blocked} onChange={e=>{setVerified(e.target.checked);clearStatus();}}/>{verificationText}</label>
     <Feedback scope="resident" status={status}/><SaveButton saving={busy==='resident'} disabled={blocked||!verified||!accountId||!siteId||(grant&&count===0)}>{grant?'Dar acceso a todos los residentes':'Revocar accesos del sector'}</SaveButton>
     </form>
-  </details>;
+  </section>;
 }
 function Feedback({scope,status}:{scope:Scope;status:Status|null}) {
   return status?.scope === scope ? <p className={status.error ? 'message error' : 'message'} role={status.error ? 'alert' : 'status'}>{status.message}</p> : null;

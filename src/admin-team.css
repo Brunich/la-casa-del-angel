@@ -31,3 +31,60 @@
 .site-colony:focus-visible,.team-action-tabs button:focus-visible{outline:3px solid var(--green);outline-offset:3px}
 @media(max-width:650px){.admin-access .admin-tabs{grid-template-columns:1fr}.app-native .admin-access .admin-tabs{grid-template-columns:1fr}.team-action-tabs{display:grid;grid-template-columns:1fr}.team-action-tabs button{justify-content:flex-start}.site-colony{padding:18px}.scope-checklist{padding:12px}.site-team-detail{margin-top:20px}}
 @media(prefers-reduced-motion:reduce){.site-colony{transition:none}}
+
+/* Sede: consulta primero, tareas administrativas a petición. */
+.site-colony-compact{display:flex;flex-wrap:wrap;gap:8px}
+.site-colony-compact .site-colony{padding:12px 16px;min-height:48px}
+.site-colony-compact .site-colony-title{margin:0;font-size:.94rem;gap:8px}
+.site-summary{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:30px 0 20px;flex-wrap:wrap}
+.site-summary h3{font-size:1.45rem;margin:0;overflow-wrap:anywhere}
+.site-summary dl{display:flex;gap:24px;margin:0;flex-wrap:wrap}
+.site-summary dl div{display:flex;flex-direction:column-reverse;gap:2px}
+.site-summary dt{font-size:.85rem;color:var(--muted)}
+.site-summary dd{margin:0;font-size:1.35rem;font-weight:600;font-variant-numeric:tabular-nums}
+.site-view-nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:28px}
+.site-view-nav button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:12px 20px;font:inherit;color:var(--muted);background:transparent;border:0;border-bottom:3px solid transparent;cursor:pointer}
+.site-view-nav button[aria-current=page]{color:var(--green);border-bottom-color:var(--green);font-weight:600}
+.site-view-nav button:hover{background:var(--sage)}
+.directory-heading{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.directory-heading h3{margin:0 0 6px}.directory-heading p,.team-directory>section>p{color:var(--muted);margin:0}
+.directory-search{position:relative;max-width:100%;width:280px;margin:0!important}
+.directory-search svg{position:absolute;top:16px;left:12px;color:var(--muted)}
+.directory-search input{padding-left:40px;min-height:48px;margin:0}
+.resident-directory,.team-people,.profile-residents{padding:0;margin:0;list-style:none}
+.resident-directory>li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 24px;padding:22px 0;border-bottom:1px solid var(--line)}
+.resident-identity{display:flex;align-items:center;gap:14px;min-width:0}
+.resident-identity h4{font-size:1.06rem;margin:0 0 4px;overflow-wrap:anywhere}
+.resident-identity p{color:var(--muted);margin:0;font-size:.9rem}
+.person-symbol{display:grid;place-items:center;background:var(--sage);color:var(--green);width:48px;height:48px;border-radius:14px;flex-shrink:0}
+.resident-destinations{display:flex;align-items:center;gap:8px}
+.resident-destinations button,.resident-shortcuts button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;color:var(--ink);background:var(--paper);font:inherit;font-size:.92rem;cursor:pointer}
+.resident-destinations .photo-destination{background:var(--sage);border-color:var(--sage);color:var(--green)}
+.resident-destinations button:hover,.resident-shortcuts button:hover{border-color:var(--green);background:var(--sage)}
+.resident-destinations button svg,.resident-shortcuts svg{flex-shrink:0}
+.resident-connections{grid-column:1/-1;margin-left:62px;color:var(--muted);font-size:.9rem}
+.resident-connections summary,.person-contact summary,.team-extra summary{cursor:pointer;padding:12px 0;min-height:44px}
+.resident-connections p{margin:8px 0;overflow-wrap:anywhere}
+.team-directory{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px}
+.team-directory h3{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.team-people{margin-top:20px}.team-people>li{padding:12px 0;border-bottom:1px solid var(--line)}
+.person-open{display:flex;width:100%;gap:12px;align-items:center;border:0;background:transparent;color:var(--ink);padding:12px 4px;text-align:left;font:inherit;cursor:pointer;border-radius:10px}
+.person-open:hover{background:var(--sage)}.person-open>span:nth-child(2){flex:1;min-width:0}.person-open strong,.person-open small{display:block;overflow-wrap:anywhere}.person-open small{color:var(--muted);margin-top:5px}
+.person-contact{padding-left:64px;font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
+.assignment-links{list-style:none;margin:0;padding:0}.assignment-links button{display:flex;justify-content:space-between;gap:12px;width:100%;text-align:left;border:0;background:transparent;color:var(--green);min-height:48px;font:inherit;cursor:pointer}
+.team-extra{margin-top:32px;border-top:1px solid var(--line);font-size:.92rem;color:var(--muted)}.team-extra li{margin:12px 0;overflow-wrap:anywhere}.team-extra li span{display:block}
+.directory-empty{padding:28px 0;color:var(--muted)}
+.team-activity header{margin:24px 0}.team-activity header h3{font-size:1.5rem;margin-bottom:8px}.team-activity header p{overflow-wrap:anywhere;color:var(--muted)}
+.team-activity>h4{font-size:1.12rem;margin:30px 0 16px}.profile-residents>li{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--line)}.profile-residents strong{overflow-wrap:anywhere}
+.team-back{display:inline-flex;align-items:center;gap:10px;min-height:48px;background:transparent;border:0;color:var(--green);font:inherit;cursor:pointer;padding:8px 0;text-decoration:underline;text-underline-offset:4px}
+.access-introduction{display:flex;gap:18px;align-items:flex-start;margin:28px 0 4px}.access-introduction>svg{color:var(--green);flex-shrink:0}.access-introduction h3{margin:0 0 8px}.access-introduction p{max-width:65ch;color:var(--muted);margin:0}
+.assignment-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:24px 0 28px}
+.assignment-choices button{display:flex;align-items:flex-start;gap:10px;min-height:72px;padding:14px;text-align:left;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:12px;font:inherit;cursor:pointer}
+.assignment-choices svg{flex-shrink:0}.assignment-choices small{display:block;color:var(--muted);font-size:.84rem;margin-top:5px}
+.assignment-choices button[aria-pressed=true]{background:var(--sage);border-color:var(--green)}
+.access-editor>form,.access-editor>.sector-access{max-width:680px}.access-editor .sector-access{margin:0;padding:0;border:0}
+.resident-shortcuts{display:flex;gap:8px;margin:16px 0}.resident-shortcuts button{flex:1}
+@media(max-width:900px){.portal-sidebar>.resident-shortcuts{grid-column:1/-1;margin:0}}
+:is(.site-view-nav,.resident-destinations,.resident-shortcuts,.assignment-choices,.team-people,.team-activity) button:focus-visible{outline:3px solid var(--green);outline-offset:3px}
+@media(max-width:1050px){.resident-directory>li{grid-template-columns:minmax(0,1fr)}.resident-destinations{justify-content:flex-start}.resident-connections{margin-left:0}.team-directory{grid-template-columns:1fr}.assignment-choices{grid-template-columns:1fr}.profile-residents>li{align-items:flex-start;flex-direction:column}}
+@media(max-width:650px){.site-view-nav button{flex:1;flex-direction:column;white-space:nowrap;padding:10px 4px;font-size:.86rem;gap:6px;min-height:68px}.site-summary dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:16px}.site-colony-compact{display:grid;grid-template-columns:1fr 1fr}.site-colony-compact .site-colony{padding:12px}.site-colony-compact .site-colony-title{font-size:.85rem}.site-colony-compact .site-colony-title>svg:last-child{display:none}.directory-search{width:100%}.resident-destinations{width:100%}.resident-destinations button{flex:1}.person-contact{padding-left:0}.resident-shortcuts{margin:8px 0}.site-summary h3{font-size:1.25rem}}
