@@ -9,7 +9,7 @@ function client(){if(!supabase)throw new Error('El acceso privado aún no está 
 export class ProfileAccessError extends Error{
  readonly code:'CARE_PROFILE_PENDING'|'CARE_PROFILE_INACTIVE';
  constructor(code:'CARE_PROFILE_PENDING'|'CARE_PROFILE_INACTIVE'){
-  super(code==='CARE_PROFILE_PENDING'?'Tu correo está confirmado. Tu cuenta espera aprobación de un Manager o Dirección general.':'Tu acceso no está activo. Contacta a coordinación.');this.code=code;
+  super(code==='CARE_PROFILE_PENDING'?'Tu correo está confirmado. Falta que un Manager o Dirección general asigne tu rol.':'Tu acceso no está activo. Contacta a tu Manager o Dirección general.');this.code=code;
  }
 }
 export async function getProfile(){
@@ -22,7 +22,7 @@ export async function getProfile(){
   if(statusError)throw new Error('No se pudo comprobar el estado de tu cuenta. Actualiza antes de continuar.');
   if(status==='pending')throw new ProfileAccessError('CARE_PROFILE_PENDING');
   if(status==='inactive')throw new ProfileAccessError('CARE_PROFILE_INACTIVE');
-  throw new Error('No se pudo consultar tu perfil autorizado. Contacta a coordinación.');
+  throw new Error('No se pudo consultar tu perfil autorizado. Contacta a tu Manager o Dirección general.');
  }
  if(!data.active)throw new ProfileAccessError('CARE_PROFILE_INACTIVE');
  return data as Profile;

@@ -1,0 +1,13 @@
+import {CircleHelp} from 'lucide-react';
+import type {Role} from './domain';
+export function PortalHelp({role}:{role:Role|null}){
+ const manage=role==='owner'||role==='manager';
+ return <section className="portal-help" aria-labelledby="portal-help-heading"><h2 id="portal-help-heading"><CircleHelp size={25} aria-hidden="true"/> Preguntas del portal</h2>
+  <details><summary>¿Qué puede hacer cada rol?</summary><dl><dt>Dirección general</dt><dd>Supervisa todas las sedes, da acceso a Managers y otras cuentas de Dirección general, y cambia roles.</dd><dt>Managers</dt><dd>Organizan sus sedes, dan de alta familiares y enfermería, y asignan los residentes autorizados. No conceden Dirección general ni Managers.</dd><dt>Enfermería</dt><dd>Registra cuidados de los residentes asignados en sus sedes. En Equipo consulta compañeros y responsables.</dd><dt>Familia</dt><dd>Consulta únicamente los residentes vinculados a su cuenta, sus cuidados y las fotografías autorizadas. No edita registros.</dd></dl></details>
+  <details><summary>Confirmé mi correo, ¿por qué no veo residentes?</summary><p>Confirmar el correo permite entrar con tu cuenta. Un Manager o Dirección general debe asignarte el rol y el acceso a tus sedes o familiares. Mientras esperas, no puedes consultar expedientes.</p></details>
+  {manage&&<details><summary>¿Cómo doy permisos o retiro un acceso?</summary><p>En Sedes y equipo, elige una sede y una persona. Usa Dar permisos para asignar sedes o residentes, Revocar accesos para retirar vínculos y Cambiar rol del perfil para editar el rol desde Dirección general. Antes de confirmar, revisa su identidad y los accesos seleccionados.</p></details>}
+  {role==='owner'&&<details><summary>¿Qué hace el modo enfermería?</summary><p>Cambia la presentación para trabajar con bitácora, medicamentos, fotografías y recordatorios. Tu cuenta conserva el acceso global de Dirección general. Una cuenta de enfermería solo ve sus residentes autorizados.</p></details>}
+  <details><summary>¿Qué significa “Todos los residentes de esta sede”?</summary><p>Asigna a la enfermera los residentes activos que existen en esa sede al confirmar. Los residentes que se registren después deben asignarse también. No concede acceso a otras sedes.</p></details>
+  <details><summary>¿Cómo llegan los avisos?</summary><p>La campana del portal muestra pendientes con la información autorizada. Activa los avisos de tu dispositivo desde ese apartado. En la web necesitan el portal abierto; los avisos locales de Android usan la última sincronización. Una urgencia requiere comunicación directa con el personal responsable.</p></details>
+ </section>;
+}

@@ -8,14 +8,14 @@ export async function getAdminAccounts():Promise<AdminAccount[]>{
 export async function inviteAccount(email:string,fullName:string){
  const{error}=await client().functions.invoke('invite-care-account',{body:{email:email.trim(),full_name:fullName.trim()}});
  if(error){
-  if('context' in error&&error.context instanceof Response){const detail=await error.context.json().catch(()=>null);if(detail?.code==='ACCOUNT_EXISTS')throw new Error('Esta persona ya tiene una cuenta. Selecciónala en Cambiar roles o Dar de alta cuenta nueva; no necesita otra invitación.');}
+  if('context' in error&&error.context instanceof Response){const detail=await error.context.json().catch(()=>null);if(detail?.code==='ACCOUNT_EXISTS')throw new Error('Esta persona ya tiene una cuenta. Selecciónala en Sedes y equipo → Cambiar rol del perfil o en Dar de alta cuenta nueva; no necesita otra invitación.');}
   throw new Error('No se confirmó el envío. Revisa la cuenta, la conexión y el límite de invitaciones antes de intentar de nuevo.');
  }
 }
 import {supabase} from './api';
 import {parseAssignmentInput,parseProfileInput,parseSiteName,parseUuid,type AssignmentInput,type ProfileInput} from './admin-input';
 
-export interface ProfileScope{siteId?:string|null;residentId?:string|null}
+export interface ProfileScope{siteId?:string|null;residentId?:string|null;siteIds?:string[];residentIds?:string[]}
 export interface SiteAssignments{staff:{user_id:string;site_id:string}[];residents:{user_id:string;resident_id:string}[]}
 
 function client() {
@@ -48,14 +48,22 @@ export async function getSiteAssignments():Promise<SiteAssignments> {
 export async function manageProfile(input:ProfileInput,actor:Profile,scope:ProfileScope={}):Promise<void> {
   const value = parseProfileInput(input,actor);
   if(value.role==='patient')throw new Error('Selecciona Dirección general, Managers, Enfermería o Familia.');
-  const siteId=scope.siteId?parseUuid(scope.siteId):null;
-  const residentId=scope.residentId?parseUuid(scope.residentId):null;
-  if(value.role==='owner'?(siteId!==null||residentId!==null):siteId===null)throw new Error('Selecciona la sede del perfil; Dirección general tiene acceso global.');
-  if((value.role==='manager'&&residentId!==null)||(value.role==='family'&&residentId===null))throw new Error('Selecciona el residente autorizado para este perfil.');
+  const siteIds=[...new Set((scope.siteIds??(scope.siteId?[scope.siteId]:[])).map(parseUuid))];
+  const residentIds=[...new Set((scope.residentIds??(scope.residentId?[scope.residentId]:[])).map(parseUuid))];
+  if(value.role==='owner'?(siteIds.length>0||residentIds.length>0):(value.active&&siteIds.length===0))throw new Error('Selecciona al menos una sede para activar el perfil; Dirección general tiene acceso global.');
+  if((value.role==='manager'&&residentIds.length>0)||(value.role==='family'&&value.active&&residentIds.length===0))throw new Error('Selecciona los residentes autorizados para este perfil.');
   try {
-    const {error} = await client().rpc('manage_profile_and_scope',{p_user_id:value.userId,p_full_name:value.fullName,p_role:value.role,p_active:value.active,p_site_id:siteId,p_resident_id:residentId,p_verified:value.verified});
+    const {error} = await client().rpc('manage_profile_scopes',{p_user_id:value.userId,p_full_name:value.fullName,p_role:value.role,p_active:value.active,p_site_ids:siteIds,p_resident_ids:residentIds,p_verified:value.verified});
     if(error) throw error;
   } catch {throw new Error('No se confirmó el perfil. Verifica que la cuenta exista en Supabase, el rol y tus permisos; vuelve a intentar.');}
+}
+export async function assignNurseSector(userId:string,siteId:string,grant:boolean):Promise<void> {
+  const account=parseUuid(userId),site=parseUuid(siteId);
+  if(typeof grant!=='boolean')throw new Error('Selecciona dar o revocar acceso.');
+  try {
+    const {error}=await client().rpc('set_nurse_sector_access',{p_user_id:account,p_site_id:site,p_grant:grant});
+    if(error)throw error;
+  } catch {throw new Error('No se confirmó el acceso al sector. Verifica que Enfermería tenga asignada esta sede y que esté dentro de tus permisos.');}
 }
 export async function createSite(name:string):Promise<void> {
   const normalized = parseSiteName(name);

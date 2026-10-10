@@ -1,12 +1,12 @@
 import {useEffect,useState} from 'react';
-import {Building2,HeartHandshake,LoaderCircle,Users} from 'lucide-react';
+import {Building2,HeartHandshake,LoaderCircle,Users,MapPin,ChevronRight} from 'lucide-react';
 import type {Resident} from './domain';
 import {getSiteAssignments,type AdminAccount} from './lib/admin-api';
 
-interface Props {sites:{id:string;name:string}[];residents:Resident[];accounts:AdminAccount[];owner:boolean}
+interface Props {sites:{id:string;name:string}[];residents:Resident[];accounts:AdminAccount[];owner:boolean;selectedSiteId?:string;onSelectSite?:(id:string)=>void}
 type Assignments = Awaited<ReturnType<typeof getSiteAssignments>>;
 
-export function SiteTeam({sites,residents,accounts,owner}:Props){
+export function SiteTeam({sites,residents,accounts,owner,selectedSiteId,onSelectSite}:Props){
  const[selectedSite,setSelectedSite]=useState('');
  const[data,setData]=useState<Assignments|null>(null);
  const[loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);
@@ -15,7 +15,7 @@ export function SiteTeam({sites,residents,accounts,owner}:Props){
   getSiteAssignments().then(result=>{if(alive)setData(result)}).catch(()=>{if(alive)setError('No se pudieron consultar las asignaciones. Actualiza para volver a intentar.');}).finally(()=>{if(alive)setLoading(false)});
   return()=>{alive=false};
  },[accounts,residents,sites,revision]);
- const site=sites.find(s=>s.id===selectedSite)??sites[0];
+ const site=sites.find(s=>s.id===(selectedSiteId??selectedSite));
  const currentResidents=site?residents.filter(r=>r.site_id===site.id):[];
  const siteStaff=site&&data?[...new Set(data.staff.filter(a=>a.site_id===site.id).map(a=>a.user_id))]:[];
  const employees=siteStaff.map(id=>accounts.find(a=>a.id===id));
@@ -40,22 +40,31 @@ export function SiteTeam({sites,residents,accounts,owner}:Props){
    </li>;
   })}</ul>;
  }
+ function chooseSite(id:string){setSelectedSite(id);onSelectSite?.(id);}
  return <section className="site-team form-panel" aria-labelledby="site-team-heading" aria-busy={loading}>
-  <div className="panel-heading"><div><h2 id="site-team-heading"><Building2 size={22} aria-hidden="true"/> Equipo y residentes por sede</h2><p>Managers son responsables de la sede. Enfermería muestra sus residentes asignados y Familia sus accesos autorizados al expediente.</p></div><button className="button small outline" type="button" disabled={loading} onClick={()=>setRevision(r=>r+1)}>Actualizar</button></div>
-  <label>{owner?'Sede':'Sede que administras'}<select value={site?.id??''} disabled={loading||sites.length===0} onChange={e=>setSelectedSite(e.target.value)}>{sites.length===0&&<option value="">Sin sedes disponibles</option>}{sites.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-  <p className="caption">{owner?'La lista incluye las sedes disponibles para Dirección general.':'La lista incluye únicamente las sedes autorizadas para tu cuenta.'} Las cantidades y vínculos corresponden a los datos disponibles en esta consulta.</p>
+  <div className="panel-heading"><div><h2 id="site-team-heading"><Building2 size={22} aria-hidden="true"/> Sedes y equipo</h2><p>{owner?'Elige una colonia para consultar su equipo y organizar los permisos.':'Elige una de tus sedes para organizar el equipo y sus residentes.'}</p></div><button className="button small outline" type="button" disabled={loading} onClick={()=>setRevision(r=>r+1)}>Actualizar equipo</button></div>
+  <div className="site-colony-grid" aria-label="Sedes por colonia">{sites.map(s=>{
+   const linkedIds=new Set(data?.staff.filter(link=>link.site_id===s.id).map(link=>link.user_id));
+   const managerCount=accounts.filter(a=>a.role==='manager'&&linkedIds.has(a.id)).length;
+   const nurseCount=accounts.filter(a=>a.role==='nurse'&&linkedIds.has(a.id)).length;
+   const residentCount=residents.filter(r=>r.site_id===s.id).length;
+   return <button className="site-colony" type="button" key={s.id} aria-pressed={site?.id===s.id} onClick={()=>chooseSite(s.id)}>
+    <span className="site-colony-title"><MapPin size={23} aria-hidden="true"/><strong>{s.name}</strong><ChevronRight size={20} aria-hidden="true"/></span>
+    {data&&!error?<span className="site-colony-counts"><span>{managerCount} Managers</span><span>{nurseCount} Enfermería</span><span>{residentCount} Residentes</span></span>:<span className="caption">{loading?'Consultando equipo…':'Equipo pendiente de consultar'}</span>}
+   </button>;
+  })}</div>
+  {sites.length===0&&<p className="message">Aún no hay sedes registradas en tu alcance. {owner?'Usa Añadir otra sede para registrar una colonia.':'Solicita a Dirección general la asignación de tu sede.'}</p>}
   {loading&&<p role="status"><LoaderCircle size={18} className="spin" aria-hidden="true"/> Consultando equipo y asignaciones…</p>}
   {error&&<p className="message error" role="alert">{error}</p>}
   {!loading&&!error&&data&&<>
-   <section className="site-team-global"><h3>Dirección general · acceso global</h3><p className="caption">Dirección general administra todas las sedes; no necesitan una asignación individual.</p>{owners.length>0&&employeeList(owners,false)}</section>
-   {!site?<p className="message">No hay sedes disponibles para consultar.</p>:<>
-    <h3>{site.name}</h3>
+   {!site?sites.length>0&&<p className="caption">Selecciona una sede arriba. Aquí aparecerán sus responsables, personal y asignaciones conforme se den de alta.</p>:<div className="site-team-detail">
+    <h3><MapPin size={20} aria-hidden="true"/> {site.name}</h3>
     <ul className="site-team-chart" aria-label={`Cantidades en ${site.name}`}>
      {chart.map(item=><li key={item.label}><span>{item.label}</span><strong>{item.value}</strong><div className="site-team-bar" aria-hidden="true"><span style={{width:`${item.value/maximum*100}%`}}/></div></li>)}
     </ul>
     <div className="site-team-grid">
-     <section className="site-team-group"><h3><Users size={20} aria-hidden="true"/> Managers responsables</h3>{managers.length?employeeList(managers,false):<p className="caption">Sin Managers asignados a esta sede.</p>}</section>
-     <section className="site-team-group"><h3><HeartHandshake size={20} aria-hidden="true"/> Enfermería</h3>{nurses.length?employeeList(nurses):<p className="caption">Sin personal de enfermería asignado a esta sede.</p>}</section>
+     <section className="site-team-group"><h3><Users size={20} aria-hidden="true"/> Managers responsables</h3>{managers.length?employeeList(managers,false):<p className="caption">Este espacio se llenará al dar de alta un Manager y asignarlo a {site.name}.</p>}</section>
+     <section className="site-team-group"><h3><HeartHandshake size={20} aria-hidden="true"/> Enfermería y residentes a cargo</h3>{nurses.length?employeeList(nurses):<p className="caption">El personal y sus residentes aparecerán aquí al guardar sus permisos.</p>}</section>
      {unknownStaff>0&&<p className="message">Hay {unknownStaff} {unknownStaff===1?'asignación de personal cuyo perfil no está disponible':'asignaciones de personal cuyos perfiles no están disponibles'} en este listado.</p>}
      <section className="site-team-group"><h3><HeartHandshake size={20} aria-hidden="true"/> Residentes y accesos familiares</h3>
       {currentResidents.length===0?<p className="caption">Sin residentes registrados en esta sede.</p>:<ul className="site-team-tree">{currentResidents.map(resident=>{
@@ -69,13 +78,14 @@ export function SiteTeam({sites,residents,accounts,owner}:Props){
       })}</ul>}
      </section>
     </div>
-   </>}
-   <section className="site-team-unassigned"><h3>Sin asignar en el listado disponible</h3>
+   </div>}
+   {owners.length>0&&<details className="site-team-global"><summary>Dirección general · todas las sedes</summary><p className="caption">Administra toda la organización, sin una sede individual.</p>{employeeList(owners,false)}</details>}
+   <details className="site-team-unassigned"><summary>Personas y residentes sin sede asignada</summary>
     {staffWithoutSite.length===0&&residentsWithoutSite.length===0?<p className="caption">No hay personal ni residentes sin sede en esta consulta.</p>:<>
      {staffWithoutSite.length>0&&<><h4>Personal sin sede asignada</h4><ul>{staffWithoutSite.map(a=><li key={a.id}>{a.full_name||a.email} · {a.email}{a.active?'':' · Cuenta inactiva'}</li>)}</ul></>}
      {residentsWithoutSite.length>0&&<><h4>Residentes sin sede disponible</h4><ul>{residentsWithoutSite.map(r=><li key={r.id}>{r.full_name}</li>)}</ul></>}
     </>}
-   </section>
+   </details>
   </>}
  </section>;
 }
