@@ -22,6 +22,8 @@ export function validateCareDraft(draft:CareDraft,photoConsent:boolean):string[]
  if(!Number.isFinite(timestamp)||timestamp>Date.now()+300000)errors.push('Verifica la fecha y hora del cuidado.');
  if(draft.notes.length>4000)errors.push('Las notas deben tener hasta 4,000 caracteres.');
  if(draft.photo_path&&!photoConsent)errors.push('Este residente no tiene autorización para fotografías.');
+ if(draft.kind==='meal'&&(!['Desayuno','Comida','Cena','Colación'].includes(String(draft.details.meal))||!['Todo','La mayor parte','La mitad','Poco','No comió'].includes(String(draft.details.intake))))errors.push('Indica la comida y cuánto comió el residente.');
+ if(draft.kind==='activity'&&(!String(draft.details.activity??'').trim()||String(draft.details.activity).trim().length>200||!/^\d{1,3}$/.test(String(draft.details.minutes??''))||Number(draft.details.minutes)<1||Number(draft.details.minutes)>600))errors.push('Indica la actividad y una duración de 1 a 600 minutos completos.');
  if(draft.kind==='incident'){
    if(!String(draft.details.incident_type??'').trim())errors.push('Selecciona el incidente.');
    if(!String(draft.details.handled_by??'').trim())errors.push('Indica quién atendió al paciente.');

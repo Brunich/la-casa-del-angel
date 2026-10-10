@@ -5,11 +5,28 @@ export async function getAdminAccounts():Promise<AdminAccount[]>{
  if(error)throw new Error('No se pudieron cargar las cuentas autorizadas.');
  return(data??[]) as AdminAccount[];
 }
-export async function inviteAccount(email:string,fullName:string){
- const{error}=await client().functions.invoke('invite-care-account',{body:{email:email.trim(),full_name:fullName.trim()}});
+export interface AccountInvitation {email:string;fullName:string;role:Role;siteIds:string[];residentIds:string[];verified:boolean}
+export interface AdminInvitation{email:string;full_name:string;role:Role;status:string;created_at:string;expires_at:string;review_reason:string|null}
+export async function getAdminInvitations():Promise<AdminInvitation[]>{const{data,error}=await client().rpc('get_admin_invitation_status');if(error)throw new Error('No se pudo consultar el estado de las invitaciones.');return data??[];}
+export class InvitationError extends Error {constructor(message:string,public code:string){super(message);this.name='InvitationError';}}
+export async function inviteAccount(input:AccountInvitation){
+ const{error}=await client().functions.invoke('invite-care-account',{body:{email:input.email.trim(),full_name:input.fullName.trim(),role:input.role,site_ids:input.siteIds,resident_ids:input.residentIds,verified:input.verified}});
  if(error){
-  if('context' in error&&error.context instanceof Response){const detail=await error.context.json().catch(()=>null);if(detail?.code==='ACCOUNT_EXISTS')throw new Error('Esta persona ya tiene una cuenta. Selecciónala en Sedes y equipo → Cambiar rol del perfil o en Dar de alta cuenta nueva; no necesita otra invitación.');}
-  throw new Error('No se confirmó el envío. Revisa la cuenta, la conexión y el límite de invitaciones antes de intentar de nuevo.');
+  if('context' in error&&error.context instanceof Response){
+   const detail=await error.context.json().catch(()=>null);
+   const messages:Record<string,string>={
+    ACCOUNT_EXISTS:'Esta persona ya tiene una cuenta. Primero debe confirmar su correo. Después selecciónala para aprobar su acceso o cambiar su rol en Sedes y equipo; no necesita otra invitación.',
+    INVITATION_LIMIT:'Llegaste al límite de 30 invitaciones por hora. Espera antes de enviar las invitaciones restantes.',
+    INVITATION_IN_PROGRESS:'Ya hay una invitación en preparación o enviada para este correo. No se envió otra; revisa las cuentas y el correo con la persona o espera antes de repetirla.',
+    INVALID_INVITATION:'Revisa el rol, las sedes y los residentes elegidos. Familia necesita al menos un residente de cada sede.',
+    INVITATION_FORBIDDEN:'No se autorizó la invitación. Revisa tus permisos y completa tu verificación inicial antes de enviar.',
+    INVITATION_EMAIL_ERROR:'El servicio de correo no confirmó el envío. Los permisos siguen pendientes; actualiza las cuentas y revisa si la persona recibió la invitación antes de reenviar.',
+    INVITATION_STATUS_PENDING:'No se confirmó el estado de la invitación y sus permisos. Revisa esta cuenta y el correo con administración antes de repetir el envío.',
+    INVITATION_SERVER_ERROR:'El servicio de invitaciones no está disponible en este momento. Inténtalo más tarde o avisa a administración si continúa.',
+   };
+   if(typeof detail?.code==='string'&&messages[detail.code])throw new InvitationError(messages[detail.code],detail.code);
+  }
+  throw new InvitationError('No se confirmó el envío. Actualiza las cuentas y revisa el correo con la persona antes de repetirlo.','INVITATION_UNKNOWN');
  }
 }
 import {supabase} from './api';

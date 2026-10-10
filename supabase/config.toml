@@ -1,0 +1,9 @@
+project_id = "la-casa-del-angel"
+
+# Each handler verifies the bearer with Auth.getUser and authorizes its RPCs.
+# Legacy HS256-only gateway verification rejects the project's modern user JWTs.
+[functions.invite-care-account]
+verify_jwt = false
+
+[functions.demo-session]
+verify_jwt = false

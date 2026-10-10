@@ -1,0 +1,10 @@
+.demo-workspace{padding:20px max(24px,env(safe-area-inset-right)) 20px max(24px,env(safe-area-inset-left));background:var(--sand);color:var(--ink);border-bottom:1px solid var(--line)}
+.demo-workspace-heading{display:flex;gap:12px;align-items:flex-start;max-width:85ch}
+.demo-workspace-heading>svg{flex-shrink:0;margin-top:2px}
+.demo-workspace-heading strong{font-size:1.05rem;line-height:1.5}
+.demo-workspace-heading p{font-size:.92rem;margin-top:4px}
+.demo-workspace-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+.demo-workspace-active{position:relative}
+.demo-workspace>.message{margin-top:16px;max-width:70ch}
+.demo-workspace>p[role=status]{margin-top:12px}
+@media(max-width:520px){.demo-workspace{padding:16px 18px}.demo-workspace-actions .button{flex:1 1 180px}.demo-workspace-heading strong{font-size:1rem}}

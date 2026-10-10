@@ -1,0 +1,18 @@
+.invitation-panel>p{max-width:68ch;margin-bottom:24px}
+.invitation-people{display:grid;gap:24px}
+.invitation-person{min-width:0}
+.invitation-person+.invitation-person{padding-top:24px;border-top:1px solid var(--line)}
+.invitation-person>h3{margin-bottom:16px}
+.invitation-person .message{overflow-wrap:anywhere}
+.invitation-add{margin-top:18px}
+.invitation-permissions{margin-top:26px;padding-top:24px;border-top:1px solid var(--line)}
+.invitation-permissions>h3{margin-bottom:14px}
+.invitation-permissions>p.caption{margin:12px 0 20px}
+.invitation-permissions>.checkbox{margin:24px 0 18px}
+.invitation-permissions>label:not(.checkbox){max-width:420px}
+.invitation-panel .message svg{vertical-align:middle;flex-shrink:0}
+.invitation-history{margin-block:24px;padding:20px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
+.invitation-history summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.invitation-history ul{list-style:none;padding:0;margin-top:20px}
+.invitation-history li{padding-block:16px;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.invitation-history li>span{display:block;font-size:.92rem;margin-top:6px}

@@ -7,7 +7,8 @@ export function parseAccountLink(fragment:string):AccountLink{
 }
 export function passwordIssues(password:string,confirmation:string){
  const issues:string[]=[];
- if(password.length<12||password.length>128)issues.push('Usa una contraseña de 12 a 128 caracteres; puede ser una frase que recuerdes.');
+ if(password.length<12)issues.push('Usa una contraseña de al menos 12 caracteres; puede ser una frase que recuerdes.');
+ if(new TextEncoder().encode(password).length>72)issues.push('La contraseña supera el límite del servicio. Usa una frase más corta; los acentos y símbolos ocupan más espacio.');
  if(password!==confirmation)issues.push('Las dos contraseñas deben coincidir.');
  return issues;
 }

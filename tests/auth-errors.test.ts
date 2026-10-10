@@ -21,3 +21,15 @@ test('login errors do not disclose whether an email has an account',()=>{
  assert.match(authErrorMessage({code:'email_not_confirmed'},'login'),/confirma.*correo/i);
  assert.doesNotMatch(authErrorMessage({code:'user_already_exists',message:'person@private.test'},'signup'),/person@private/);
 });
+test('used verification link directs confirmed users to their existing password',()=>{
+ const message=authErrorMessage({code:'otp_expired',status:403,message:'private token'},'verification');
+ assert.match(message,/venció o ya fue usado/i);
+ assert.match(message,/contraseña que ya elegiste/i);
+ assert.doesNotMatch(message,/private token/);
+});
+test('authenticator failures distinguish incorrect codes from service/network errors',()=>{
+ assert.match(authErrorMessage({code:'mfa_verification_failed',status:403},'mfa'),/autenticador/i);
+ assert.match(authErrorMessage({status:503},'mfa'),/servidor/i);
+ assert.match(authErrorMessage({name:'AuthRetryableFetchError',status:0},'mfa'),/conexión/i);
+ assert.doesNotMatch(authErrorMessage({message:'private factor secret'},'mfa'),/private factor secret/);
+});

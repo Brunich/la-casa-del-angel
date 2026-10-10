@@ -4,8 +4,11 @@ import {validatePreparedPhoto,type PreparedCarePhoto} from './photo-policy';
 import type {CareDraft,CareEvent,MedicationPlan,MedicationMovement,Profile,Resident,Reminder} from '../domain';
 const url=import.meta.env.VITE_SUPABASE_URL;
 const key=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-export const supabase=url&&key?createClient(url,key,{global:{fetch:(input,options)=>fetch(input,{...options,cache:"no-store"})},auth:{persistSession:true,storageKey:AUTH_STORAGE_KEY,storage:createSessionStorage(sessionStorage,()=>Date.now(),AUTH_STORAGE_KEY),autoRefreshToken:true,detectSessionInUrl:false}}):null;
+export const ownerSupabase=url&&key?createClient(url,key,{global:{fetch:(input,options)=>fetch(input,{...options,cache:"no-store"})},auth:{persistSession:true,storageKey:AUTH_STORAGE_KEY,storage:createSessionStorage(sessionStorage,()=>Date.now(),AUTH_STORAGE_KEY),autoRefreshToken:true,detectSessionInUrl:false}}):null;
+export let supabase=ownerSupabase;
+export function setPortalClient(next:typeof ownerSupabase){supabase=next;}
 function client(){if(!supabase)throw new Error('El acceso privado aún no está habilitado. Contacta a la residencia.');return supabase}
+function careActor(expected:typeof supabase){if(!expected||expected!==supabase)throw new Error('La cuenta cambió. Abre un registro nuevo desde tu cuenta actual; este intento no se envió.');return expected;}
 export class ProfileAccessError extends Error{
  readonly code:'CARE_PROFILE_PENDING'|'CARE_PROFILE_INACTIVE';
  constructor(code:'CARE_PROFILE_PENDING'|'CARE_PROFILE_INACTIVE'){
@@ -34,13 +37,13 @@ export async function getAccessibleMedications(){const{data,error}=await client(
 export async function getMovements(residentId:string){const{data,error}=await client().rpc('get_medication_movements',{p_resident_id:residentId});if(error)throw new Error('No se pudo cargar el historial de existencias.');return(data??[]) as MedicationMovement[]}
 export async function cancelReminder(id:string){const{error}=await client().rpc('cancel_reminder',{p_id:id});if(error)throw new Error('No se pudo cancelar el recordatorio. Revisa tus permisos o actualiza la vista.');}
 export async function getReminders(){const{data,error}=await client().from('reminders').select('*').order('due_at');if(error)throw new Error('No pudimos cargar los recordatorios.');return(data??[]) as Reminder[]}
-export async function saveCare(residentId:string,draft:CareDraft){const{data,error}=await client().rpc('record_care_event',{p_resident_id:residentId,p_kind:draft.kind,p_occurred_at:draft.occurred_at,p_notes:draft.notes,p_details:draft.details,p_photo_path:draft.photo_path??null,p_medication_plan_id:draft.medication_plan_id??null,p_units_taken:draft.units_taken??null});if(error)throw new Error('No se guardó el cuidado. Revisa la pauta, las existencias, los permisos y los campos requeridos; vuelve a intentar.');return data as string}
-export async function uploadPhoto(residentId:string,photo:PreparedCarePhoto){
+export async function saveCare(residentId:string,draft:CareDraft,expected=supabase){const{data,error}=await careActor(expected).rpc('record_care_event',{p_resident_id:residentId,p_kind:draft.kind,p_occurred_at:draft.occurred_at,p_notes:draft.notes,p_details:draft.details,p_photo_path:draft.photo_path??null,p_medication_plan_id:draft.medication_plan_id??null,p_units_taken:draft.units_taken??null});if(error)throw new Error('No se guardó el cuidado. Revisa la pauta, las existencias, los permisos y los campos requeridos; vuelve a intentar.');return data as string}
+export async function uploadPhoto(residentId:string,photo:PreparedCarePhoto,expected=supabase){
  validatePreparedPhoto(photo);const blob=photo.blob;
  const path=residentId+'/'+crypto.randomUUID()+'.jpg';
- const{error}=await client().storage.from('care-photos').upload(path,blob,{contentType:'image/jpeg',upsert:false});if(error)throw new Error('No se pudo subir la fotografía. Revisa tu conexión y la autorización.');return path;
+ const{error}=await careActor(expected).storage.from('care-photos').upload(path,blob,{contentType:'image/jpeg',upsert:false});if(error)throw new Error('No se pudo subir la fotografía. Revisa tu conexión y la autorización.');return path;
 }
-export async function downloadPhoto(path:string){const{data,error}=await client().storage.from('care-photos').download(path);if(error)throw new Error('No se pudo abrir la foto o ya no tienes acceso.');return URL.createObjectURL(data)}
+export async function downloadPhoto(path:string,expected=supabase){const actor=careActor(expected);const{data,error}=await actor.storage.from('care-photos').download(path);if(error)throw new Error('No se pudo abrir la foto o ya no tienes acceso.');careActor(actor);return URL.createObjectURL(data)}
 export async function removeDraftPhoto(path:string){const{error}=await client().storage.from('care-photos').remove([path]);if(error)throw new Error('No se pudo cerrar el borrador. Revisa la conexión y vuelve a intentar.');}
 export async function addReminder(reminder:Pick<Reminder,'resident_id'|'kind'|'due_at'|'user_id'|'medication_plan_id'>){const{error}=await client().from('reminders').insert(reminder);if(error)throw new Error('No se guardó el recordatorio.');}
 export async function addStock(planId:string,units:number,reason:string,requestId:string){const{error}=await client().rpc('register_stock',{p_plan_id:planId,p_units:units,p_reason:reason,p_request_id:requestId});if(error)throw new Error('No se confirmó la reposición. Reintenta el mismo registro para verificarlo sin duplicar existencias.');}

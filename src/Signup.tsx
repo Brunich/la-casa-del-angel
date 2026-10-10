@@ -36,9 +36,9 @@ export function Signup({onSignIn}:{onSignIn:()=>void}){
   {sitesLoading&&<p className="caption" role="status">Consultando sedes…</p>}
   {sitesError&&<div className="message warning" role="alert"><p>{sitesError}</p><button type="button" className="text-link" onClick={()=>setRevision(r=>r+1)}>Volver a consultar sedes</button></div>}
   <p id="signup-site-help" className="caption">{siteId?'El equipo autorizado de esta sede revisará tu solicitud. Elegirla no da acceso a expedientes.':'Si registras la cuenta sin sede, Dirección general revisará tu solicitud. Puedes continuar aunque todavía no se haya publicado una sede.'}</p>
-  <label>Contraseña<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password" required minLength={12} maxLength={128} aria-describedby="signup-password-help"/></label>
-  <label>Repite la contraseña<input type="password" value={confirmation} onChange={e=>setConfirmation(e.target.value)} autoComplete="new-password" required minLength={12} maxLength={128}/></label>
-  <p id="signup-password-help" className="caption">Usa de 12 a 128 caracteres. Una frase larga suele ser más fácil de recordar. Las contraseñas deben coincidir.</p>
+  <label>Contraseña<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password" required minLength={12} maxLength={72} aria-describedby="signup-password-help"/></label>
+  <label>Repite la contraseña<input type="password" value={confirmation} onChange={e=>setConfirmation(e.target.value)} autoComplete="new-password" required minLength={12} maxLength={72}/></label>
+  <p id="signup-password-help" className="caption">Usa al menos 12 caracteres, hasta 72 sin acentos; los símbolos ocupan más espacio. Una frase larga suele ser más fácil de recordar. Las contraseñas deben coincidir.</p>
   {error&&<p className="message error" role="alert">{error}</p>}
   <button className="button full" type="submit">{busy?'Solicitando registro…':'Crear cuenta y verificar correo'}</button>
  </fieldset></form><button type="button" className="text-link" disabled={busy} onClick={onSignIn}>Ya tengo cuenta · Iniciar sesión</button></>;

@@ -42,3 +42,11 @@ test('pending reminders exclude completed or future reminders', () => {
   const now=new Date('2026-10-09T12:00:00Z');
   assert.deepEqual(domain.pendingReminders([{id:'due',due_at:'2026-10-09T11:00:00Z',completed_at:null},{id:'future',due_at:'2026-10-09T13:00:00Z',completed_at:null},{id:'done',due_at:'2026-10-09T11:00:00Z',completed_at:'2026-10-09T11:30:00Z'}],now).map(x=>x.id),['due']);
 });
+test('meal and activity records require complete, bounded details',()=>{
+ assert.ok(domain);
+ const base={occurred_at:new Date().toISOString(),notes:'',details:{},photo_path:null};
+ assert.ok(domain.validateCareDraft({...base,kind:'meal'},false).length);
+ assert.deepEqual(domain.validateCareDraft({...base,kind:'meal',details:{meal:'Cena',intake:'No comió'}},false),[]);
+ assert.ok(domain.validateCareDraft({...base,kind:'activity',details:{activity:'Prueba',minutes:'601'}},false).length);
+ assert.deepEqual(domain.validateCareDraft({...base,kind:'activity',details:{activity:'Prueba',minutes:'15'}},false),[]);
+});

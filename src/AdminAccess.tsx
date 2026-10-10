@@ -3,6 +3,7 @@ import {Building2,HeartHandshake,KeyRound,LoaderCircle,UserPlus,Users,UserRoundC
 import {ManagerOnboarding} from './ManagerOnboarding';
 import {SiteTeam} from './SiteTeam';
 import {InviteAccountForm} from './InviteAccountForm';
+import {InvitationHistory} from './InvitationHistory';
 import {roleNames,type Profile,type Resident,type Role} from './domain';
 import {assignNurseSector,createSite,getAdminAccounts,getSiteAssignments,manageProfile,setResidentAccess,setStaffSite} from './lib/admin-api';
 import {parseAssignmentInput,parseProfileInput,parseSiteName,type AssignmentInput} from './lib/admin-input';
@@ -20,7 +21,6 @@ type ProfileAccount = AdminAccount & {role:Role};
 
 export function AdminAccess({profile,residents,sites,onUpdated,initialSection='pending'}:Props) {
   const [accounts,setAccounts] = useState<AdminAccount[]>([]);
-  const [manualProfile,setManualProfile] = useState(false);
   const [accountsError,setAccountsError] = useState('');
   const [accountsLoading,setAccountsLoading] = useState(true);
   const [busy,setBusy] = useState<Scope|null>(null);
@@ -127,8 +127,9 @@ export function AdminAccess({profile,residents,sites,onUpdated,initialSection='p
       <button type="button" className={`admin-tab admin-tab-family${section==='residents'?' active':''}`} aria-pressed={section==='residents'} onClick={()=>setSection('residents')}><HeartHandshake size={24} aria-hidden="true"/><span>Dar acceso familia a residente<small>Autorizar o retirar acceso al expediente</small></span></button>
     </nav>
     {accountsLoading&&<p className="message" role="status"><LoaderCircle className="spin" size={18} aria-hidden="true"/> Consultando cuentas y permisos…</p>}
-    {section==='pending'&&!accountsLoading&&<><ManagerOnboarding accounts={accounts.filter(p => p.role === null)} residents={residents} sites={sites} onUpdated={()=>{void refreshAccounts();onUpdated();}}/>
-    <details className="form-panel"><summary>¿La persona todavía no tiene cuenta? Invitar por correo</summary><InviteAccountForm onUpdated={()=>void refreshAccounts()}/></details>
+    {section==='pending'&&<><InviteAccountForm profile={profile} residents={residents} sites={sites} onUpdated={()=>void refreshAccounts()}/>
+    <InvitationHistory revision={accounts}/>
+    {!accountsLoading&&<ManagerOnboarding accounts={accounts.filter(p => p.role === null)} residents={residents} sites={sites} onUpdated={()=>{void refreshAccounts();onUpdated();}}/>}
     </>}
     {section==='staff'&&<><SiteTeam sites={sites} residents={residents} accounts={accounts} owner={owner} selectedSiteId={selectedSiteId} onSelectSite={setSelectedSiteId}/>
       {selectedSiteId&&<div className="team-action-tabs" aria-label="Acciones de equipo">
@@ -141,7 +142,7 @@ export function AdminAccess({profile,residents,sites,onUpdated,initialSection='p
       <h2 id="account-heading"><Users size={22} aria-hidden="true"/> Cambiar rol del perfil</h2>
       <p>Selecciona a la persona y revisa el rol, sus sedes y los residentes autorizados. Al guardar, esta selección sustituye sus permisos anteriores.</p>
       <form onSubmit={saveProfile} aria-busy={busy === 'profile'}>
-        <label>Persona<select value={accounts.some(p => p.id === userId) ? userId : ''} disabled={blocked || manualProfile || !scopeAssignments} required={!manualProfile} onChange={e => chooseAccount(e.target.value)}><option value="">Seleccionar persona</option>{accounts.map(p => <option key={p.id} value={p.id}>{p.full_name || p.email} · {p.email} · {p.role?accessRoleNames[p.role]:'Sin rol'}{p.role&&!p.active ? ' · Inactiva' : ''}</option>)}</select></label>
+        <label>Persona<select value={accounts.some(p => p.id === userId) ? userId : ''} disabled={blocked || !scopeAssignments} required onChange={e => chooseAccount(e.target.value)}><option value="">Seleccionar persona</option>{accounts.map(p => <option key={p.id} value={p.id}>{p.full_name || p.email} · {p.email} · {p.role?accessRoleNames[p.role]:'Sin rol'}{p.role&&!p.active ? ' · Inactiva' : ''}</option>)}</select></label>
         <div className="field-grid">
           <label>Nombre completo<input value={fullName} onChange={e => {setFullName(e.target.value);editProfile();}} disabled={blocked} required maxLength={160} autoComplete="off"/></label>
           <label>Rol<select value={role} onChange={e => {setRole(e.target.value as Role);setProfileSiteIds([]);setProfileResidentIds([]);editProfile();}} disabled={blocked || self}>{Object.entries(accessRoleNames).filter(([value]) => value !== 'patient').map(([value,name]) => <option key={value} value={value}>{name}</option>)}</select></label>
@@ -159,7 +160,6 @@ export function AdminAccess({profile,residents,sites,onUpdated,initialSection='p
         <Feedback scope="profile" status={status}/>
         {!active&&<p className="caption">La cuenta inactiva no podrá consultar expedientes. Puedes desmarcar todas las sedes y residentes para retirar también sus asignaciones.</p>}
         <SaveButton saving={busy === 'profile'} disabled={blocked || !verified || !scopeAssignments || (active&&role!=='owner'&&profileSiteIds.length===0) || (role==='family'&&((active&&profileResidentIds.length===0)||incompleteFamilyScope))}>Guardar rol y permisos</SaveButton>
-        <details onToggle={e => {setManualProfile(e.currentTarget.open);editProfile();}}><summary>Entrada manual para una cuenta existente</summary><p className="caption">Usa el identificador verificado de una cuenta que ya existe. Esta acción no crea una cuenta ni envía una invitación.</p><label>Identificador de la cuenta<input name="userId" value={userId} onChange={e => chooseAccount(e.target.value)} disabled={blocked || !manualProfile} required={manualProfile} maxLength={50} autoComplete="off" spellCheck={false}/></label></details>
       </form>
     </section>}
 

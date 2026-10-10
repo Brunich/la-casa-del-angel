@@ -8,3 +8,9 @@ test('cannot turn a supplied next destination into a redirect',()=>{assert.ok(li
 test('new password requires a long matching value without silently trimming it',()=>{assert.ok(lib);assert.deepEqual(lib.passwordIssues('Una clave larga! 123','Una clave larga! 123'),[]);assert.ok(lib.passwordIssues('corta','corta').length);assert.ok(lib.passwordIssues('Una clave larga! 123','otra clave larga 456').length);});
 
 test('native recovery uses the authorized web account route, never the local WebView origin',()=>{assert.ok(lib);assert.equal(lib.accountRecoveryRedirect('https://localhost',true),'https://la-casa-del-angel.vercel.app/cuenta');assert.equal(lib.accountRecoveryRedirect('capacitor://localhost',true),'https://la-casa-del-angel.vercel.app/cuenta');assert.equal(lib.accountRecoveryRedirect('https://la-casa-del-angel.vercel.app',false),'https://la-casa-del-angel.vercel.app/cuenta');});
+test('passwords respect the actual 72-byte bcrypt limit including accents',()=>{
+ assert.deepEqual(lib.passwordIssues('a'.repeat(72),'a'.repeat(72)),[]);
+ assert.ok(lib.passwordIssues('a'.repeat(73),'a'.repeat(73)).length);
+ assert.deepEqual(lib.passwordIssues('ñ'.repeat(36),'ñ'.repeat(36)),[]);
+ assert.ok(lib.passwordIssues('ñ'.repeat(37),'ñ'.repeat(37)).length);
+});

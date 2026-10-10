@@ -1,9 +1,11 @@
-type AuthAction='signup'|'login'|'recovery';
+type AuthAction='signup'|'login'|'recovery'|'verification'|'mfa';
 // Only controlled messages: never render raw provider errors, emails or internals.
 export function authErrorMessage(error:unknown,action:AuthAction):string{
  const value=error&&typeof error==='object'?error as {code?:unknown;status?:unknown;name?:unknown}:{};
  const code=typeof value.code==='string'?value.code:'';
  const status=typeof value.status==='number'?value.status:undefined;
+ if(action==='verification'&&code==='otp_expired')return 'Este enlace venció o ya fue usado. Si ya confirmaste tu correo, entra con la contraseña que ya elegiste. Usa recuperación solo si la olvidaste; si nunca confirmaste, solicita un enlace nuevo.';
+ if(action==='mfa'&&['mfa_verification_failed','mfa_challenge_expired'].includes(code))return 'El código del autenticador no es válido o venció. Usa los seis dígitos vigentes en tu aplicación autenticadora; no es un código del correo.';
  if(code==='signup_disabled'||code==='email_provider_disabled')return 'El registro de cuentas está desactivado en la configuración de la residencia. Un administrador debe habilitarlo; cambiar tus datos no resolverá este error.';
  if(code==='over_email_send_rate_limit')return 'Se alcanzó el límite de envío de correos. Revisa tu bandeja y spam antes de volver a solicitarlo; espera unos minutos para reintentar.';
  if(code==='over_request_rate_limit'||status===429)return 'Se hicieron demasiados intentos seguidos. Espera unos minutos antes de volver a intentar.';
@@ -17,5 +19,7 @@ export function authErrorMessage(error:unknown,action:AuthAction):string{
  if(error instanceof TypeError||value.name==='AuthRetryableFetchError'||status===0)return 'No pudimos conectar con el servicio de acceso. Revisa tu conexión; si otras páginas funcionan, el servicio puede estar temporalmente inaccesible.';
  if(action==='login')return 'No se pudo iniciar sesión. Revisa tus datos y confirma el correo; si el problema continúa, contacta a la residencia.';
  if(action==='recovery')return 'No se pudo solicitar el correo de recuperación. Intenta más tarde o contacta a la residencia si continúa.';
+ if(action==='verification')return 'No se pudo comprobar este enlace. Si ya confirmaste tu correo, inicia sesión con tu contraseña; si el problema continúa, consulta con un manager.';
+ if(action==='mfa')return 'No se pudo completar la verificación del autenticador. Intenta de nuevo o contacta a un manager si continúa.';
  return 'No se pudo confirmar el registro. Si ya tienes cuenta, inicia sesión o recupera tu contraseña; si el problema continúa, contacta a la residencia.';
 }
